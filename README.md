@@ -1,1 +1,1 @@
-Algorithm problem solving strategy
+심심풀이
