@@ -1,5 +1,8 @@
 #include <iostream>
-#define MOD 10000000007
+
+using namespace std;
+
+#define MOD 1000000007
 #define MAX 101;
 int cost[101] = {-1, };
 
@@ -24,7 +27,7 @@ int asymtiling(int n){
   if(n%2){
     return (tiling(n) - tiling((n-1)/2) + MOD)%MOD;
   } else {
-    return (tiling(n) - (tiling(n/2) + tiling((n/2)-1)))%MOD;
+    return (tiling(n) - ((tiling(n/2) + tiling((n/2)-1))%MOD) + MOD)%MOD;
   }
 }
 
@@ -36,10 +39,10 @@ int main(){
   }
   int cases;
   int width;
-  std::cin >> cases;
+  cin >> cases;
   while(cases--){
-    std::cin >> width;
-    std::cout << asymtiling(width) << std::endl;
+    cin >> width;
+    cout << asymtiling(width) << endl;
   }
 }
 
