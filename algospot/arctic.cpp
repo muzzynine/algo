@@ -9,43 +9,124 @@
  */
 
 /* 
- * 각 탐사기지가 모두 이어지되 최소의 거리를 구하는 문제이다. 
- * 즉 최소 신장 트리(minimum sparse tree)의 가장 긴 간선을 구하는 문제이다.
+ * 최소 신장 트리(minimum sparse tree)의 가장 긴 간선을 구하는 문제이다.
+ * 우선순위 큐는 이진힙으로 구현한다.
 */
 
+#include <iostream>
 #include <cstdio>
 #include <cmath>
 #include <vector>
+
+#define LEFT_CHILD(n) n*2
+#define RIGHT_CHILD(n) n*2+1
+#define PARENT(n) n/2
+
 using namespace std;
 
-typedef struct vertex{
-  double x;
-  double y;
+
+struct Vertex{
   int id;
   int adj;
+  double x;
+  double y;
   double key_distance;
-}Vertex;
+};
 
-vector<Vertex> v_list;
+int heap_size;
+int v_size;
+
+void min_heapify(Vertex* heap, int index){
+  int smallest;
+  int l = LEFT_CHILD(index);
+  int r = RIGHT_CHILD(index);
+
+  if(l < heap_size && heap[l].key_distance < heap[index].key_distance){
+    smallest = l;
+  }
+  else smallest = index;
+
+  if(r < heap_size && heap[r].key_distance < heap[index].key_distance){
+    smallest = r;
+  }
+
+  if(smallest != index){
+    Vertex tmp = heap[index];
+    heap[index] = heap[smallest];
+    heap[smallest] = tmp;
+    min_heapify(heap, smallest);
+  }
+}
+
+void min_heap_build(Vertex* heap){
+  heap_size = v_size;
+  //heap의 루트에 대해서 상위로 올라가면서 힙으로 만든다.
+  for(int i = heap_size/2-1; i > -1; i--){
+    min_heapify(heap, i);
+  }
+}
+
+Vertex min_extract(Vertex* heap){
+  Vertex max = heap[0];
+  heap[0] = heap[heap_size];
+  min_heapify(heap, 0);
+  heap_size = heap_size-1;
+
+  return max;
+}
+
+void decrease_key(Vertex* heap, double key, int index){
+  if(key > heap[index].key_distance){
+    return;
+  }
+  heap[index].key_distance = key;
+  while(index > -1 && heap[PARENT(index)].key_distance > heap[index].key_distance){
+    Vertex tmp;
+    tmp = heap[PARENT(index)];
+    heap[PARENT(index)] = heap[index];
+    heap[index] = tmp;
+    index = PARENT(index);
+  }
+}
+
+
+Vertex v_list[50];
 //u -> v distance[u][v]
 double distances[100][100];
 
 void initialize(){
+  //Initialize the vertex set 
+  v_list[0].key_distance = 0;
+  v_list[0].adj = -1;
+  for(int i = 1; i < v_size; i++){
+    v_list[i].key_distance = 1001;
+    v_list[i].adj = -1;
+  }
+
+  min_heap_build(v_list);
+  
+  
   //Initialize the distance info
-  for(int i = 0; i < v_list.size(); i++){
-    for(int j = i+1; j < v_list.size(); j++){
+  for(int i = 0; i < v_size; i++){
+    for(int j = i+1; j < v_size; j++){
       double x_distance = (v_list[j].x - v_list[i].x) * (v_list[j].x - v_list[i].x);
       double y_distance = (v_list[j].y - v_list[i].y) * (v_list[j].y - v_list[i].y);
       distances[i][j] = distances[j][i] = x_distance + y_distance;
     }
   }
+}
 
-  //Initialize the vertex set 
-  v_list[0].key_distance = 0;
-  v_list[0].adj = -1;
-  for(int i = 1; i < v_list.size(); i++){
-    v_list[i].key_distance = 1001;
-    v_list[i].adj = -1;
+void print_out(){
+  for(int i = 0 ; i < heap_size; i++){
+    printf("%f ", v_list[i].key_distance);
+  }
+  printf("\n");
+
+  for(int i = 0; i < v_size; i++){
+    for(int j = 0; j < v_size; j++){
+      printf("%f ", distances[i][j]);
+    }
+    printf("\n");
   }
 }
 
@@ -54,28 +135,17 @@ double solve(){
 
   double max = -1;
 
-  while(v_list.size() > 0){
-    Vertex u;
+  while(heap_size > 0){
+    Vertex u = min_extract(v_list);
     Vertex *v;
-    int cut_i;
-    u.key_distance = 1001;
-
-    //v_list에서 가장 낮은 key_distance 값을 갖는 정점을 선택하고 v_list에서 제거
-    for(int i = 0; i < v_list.size(); i++){
-      if(u.key_distance > v_list[i].key_distance) {
-	u = v_list[i];
-	cut_i = i;
-      }
-    }
-    v_list.erase(v_list.begin() + cut_i);
-
+    
     if(u.id != 0 && max < u.key_distance) max = u.key_distance;
 
-    for(int i = 0; i < v_list.size(); i++){
+    for(int i = 0; i < heap_size; i++){
       v = &v_list[i];
       if(distances[u.id][v->id] < v->key_distance){
 	v->adj = u.id;
-	v->key_distance = distances[u.id][v->id];
+	decrease_key(v_list, distances[u.id][v->id], i);
       }
     }
   }
@@ -84,22 +154,22 @@ double solve(){
 }
 
 
+
 int main(){
   int cases;
-  scanf("%d", &cases);
+  cin >> cases;
   while(cases--){
-    int v_size;
-    scanf("%d", &v_size);
+    cin >> v_size;
     for(int i = 0; i < v_size; i++){
       Vertex v;
-      scanf("%lf", &v.x);
-      scanf("%lf", &v.y);
+
+      cin >> v.x >> v.y;
       v.id = i;
-      v_list.push_back(v);
+      v_list[i] = v;
     }
     double solution = solve();
 
-    printf("%.2f", solution);
+    printf("%.2f\n", solution);
   }
   return 0;
 }
